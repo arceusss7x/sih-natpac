@@ -12,7 +12,7 @@ interface Trip {
   id: number;
   title: string;
   route: string;
-  time: string;
+  time: string; // e.g. "10:00 - 10:45"
   mode: string;
   icon: string;
   numberOfPeople?: string;
@@ -22,15 +22,16 @@ interface Trip {
 interface ManualTripFormProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (trip: Trip) => void; // callback to save trip
-  initialValues?: Trip | null;  // optional for editing
+  onSave: (trip: Trip) => void;
+  initialValues?: Trip | null;
 }
 
 const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualTripFormProps) => {
   const [formData, setFormData] = useState({
     startLocation: "",
     endLocation: "",
-    timeConsumed: "",
+    startTime: "",
+    endTime: "",
     transportMode: "",
     numberOfPeople: "1",
     notes: ""
@@ -49,10 +50,12 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
   // Pre-fill form when editing
   useEffect(() => {
     if (initialValues) {
+      const [startT, endT] = initialValues.time.split(" - ");
       setFormData({
         startLocation: initialValues.route.split(" - ")[0] || "",
         endLocation: initialValues.route.split(" - ")[1] || "",
-        timeConsumed: initialValues.time.replace(" mins", ""),
+        startTime: startT || "",
+        endTime: endT || "",
         transportMode: initialValues.mode,
         numberOfPeople: initialValues.numberOfPeople || "1",
         notes: initialValues.notes || ""
@@ -61,7 +64,8 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
       setFormData({
         startLocation: "",
         endLocation: "",
-        timeConsumed: "",
+        startTime: "",
+        endTime: "",
         transportMode: "",
         numberOfPeople: "1",
         notes: ""
@@ -75,7 +79,8 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
     if (
       !formData.startLocation ||
       !formData.endLocation ||
-      !formData.timeConsumed ||
+      !formData.startTime ||
+      !formData.endTime ||
       !formData.transportMode ||
       !formData.numberOfPeople
     ) {
@@ -87,7 +92,7 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
       id: initialValues ? initialValues.id : Date.now(),
       title: `${formData.startLocation} to ${formData.endLocation}`,
       route: `${formData.startLocation} - ${formData.endLocation}`,
-      time: `${formData.timeConsumed} mins`,
+      time: `${formData.startTime} - ${formData.endTime}`,
       mode: formData.transportMode,
       icon:
         formData.transportMode === "walking"
@@ -108,14 +113,14 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
     };
 
     onSave(trip);
-
     toast.success(initialValues ? "Trip updated successfully!" : "Trip recorded successfully!");
 
-    // Reset form after saving
+    // Reset form
     setFormData({
       startLocation: "",
       endLocation: "",
-      timeConsumed: "",
+      startTime: "",
+      endTime: "",
       transportMode: "",
       numberOfPeople: "1",
       notes: ""
@@ -133,6 +138,7 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Start & End Location */}
           <div className="space-y-2">
             <Label htmlFor="startLocation" className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-green-500" />
@@ -161,21 +167,38 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="timeConsumed" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Time Consumed *
-            </Label>
-            <Input
-              id="timeConsumed"
-              type="number"
-              placeholder="Minutes"
-              value={formData.timeConsumed}
-              onChange={(e) => setFormData({ ...formData, timeConsumed: e.target.value })}
-              required
-            />
+          {/* Start and End Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startTime" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Start Time *
+              </Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="endTime" className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                End Time *
+              </Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                required
+              />
+            </div>
           </div>
 
+          {/* Number of People */}
           <div className="space-y-2">
             <Label htmlFor="numberOfPeople" className="flex items-center gap-2">
               👥 Number of People *
@@ -191,6 +214,7 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
             />
           </div>
 
+          {/* Mode of Transport */}
           <div className="space-y-3">
             <Label>Mode of Transport *</Label>
             <RadioGroup
@@ -204,10 +228,7 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
                   className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-muted/50"
                 >
                   <RadioGroupItem value={mode.value} id={mode.value} />
-                  <Label
-                    htmlFor={mode.value}
-                    className="flex items-center gap-2 cursor-pointer flex-1"
-                  >
+                  <Label htmlFor={mode.value} className="flex items-center gap-2 cursor-pointer flex-1">
                     <span className="text-lg">{mode.icon}</span>
                     <span className="text-sm">{mode.label}</span>
                   </Label>
@@ -216,6 +237,7 @@ const ManualTripForm = ({ isOpen, onOpenChange, onSave, initialValues }: ManualT
             </RadioGroup>
           </div>
 
+          {/* Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Additional Notes</Label>
             <Textarea

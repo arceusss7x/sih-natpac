@@ -53,7 +53,15 @@ const Welcome = () => {
             </div>
           </div>
 
-          <button className="text-sm text-accent mt-3 underline">
+          <button
+            className="text-sm text-accent mt-3 underline"
+            onClick={() =>
+              window.open(
+                "https://kscste.kerala.gov.in/national-transportation-planning-research-centre-natpac/",
+                "_blank"
+              )
+            }
+          >
             Learn more about data usage
           </button>
         </div>

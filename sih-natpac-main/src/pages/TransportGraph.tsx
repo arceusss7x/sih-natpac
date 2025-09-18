@@ -4,26 +4,83 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BottomNavigation from "@/components/BottomNavigation";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
-const TransportGraph = () => {
+interface Trip {
+  id: number;
+  title: string;
+  route: string;
+  time: string;
+  mode: string;
+  icon: string;
+}
+
+interface TripDay {
+  id: number;
+  date: string;
+  trips: Trip[];
+}
+
+interface TransportGraphProps {
+  tripHistory: TripDay[];
+}
+
+const TransportGraph = ({ tripHistory }: TransportGraphProps) => {
   const navigate = useNavigate();
 
-  // Default values are all 0
-  const actualData = [
-    { name: "Car", value: 0, color: "#3B82F6" },
-    { name: "Bus", value: 0, color: "#06B6D4" },
-    { name: "Walk", value: 0, color: "#10B981" },
-    { name: "Bike", value: 0, color: "#8B5CF6" },
-    { name: "Other", value: 0, color: "#F59E0B" },
-  ];
+  const modeColors: Record<string, string> = {
+    car: "#3B82F6",
+    bus: "#06B6D4",
+    walk: "#10B981",
+    bike: "#8B5CF6",
+    train: "#F87171",
+    motorcycle: "#FBBF24",
+    other: "#F59E0B",
+  };
 
-  // later you will update `actualData` values from your trip records when trips happen
+  // Count trips per mode
+  const modeCounts: Record<string, number> = {};
+  tripHistory.forEach(day => {
+    day.trips.forEach(trip => {
+      // Normalize mode
+      const normalizedMode = trip.mode.toLowerCase().trim();
+      // Only use "other" if truly unknown
+      const key = normalizedMode in modeColors ? normalizedMode : "other";
+      modeCounts[key] = (modeCounts[key] || 0) + 1;
+    });
+  });
 
-  const totalTrips = actualData.reduce((sum, item) => sum + item.value, 0);
+  // Pie chart data for used modes
+  const pieData = Object.keys(modeCounts)
+    .filter(mode => modeCounts[mode] > 0)
+    .map(mode => ({
+      name: mode.charAt(0).toUpperCase() + mode.slice(1),
+      value: modeCounts[mode],
+      color: modeColors[mode] || modeColors["other"],
+    }));
 
+  // Legend: separate used and unused
+  const usedLegend = Object.keys(modeColors)
+    .filter(mode => (modeCounts[mode] || 0) > 0)
+    .map(mode => ({
+      name: mode.charAt(0).toUpperCase() + mode.slice(1),
+      value: modeCounts[mode],
+      color: modeColors[mode],
+    }));
+
+  const unusedLegend = Object.keys(modeColors)
+    .filter(mode => !modeCounts[mode] || modeCounts[mode] === 0)
+    .map(mode => ({
+      name: mode.charAt(0).toUpperCase() + mode.slice(1),
+      value: 0,
+      color: modeColors[mode],
+    }));
+
+  const legendData = [...usedLegend, ...unusedLegend];
+
+  const totalTrips = pieData.reduce((sum, item) => sum + item.value, 0);
   const displayData =
     totalTrips === 0
       ? [{ name: "No Data", value: 100, color: "black" }]
-      : actualData;
+      : pieData;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -79,14 +136,11 @@ const TransportGraph = () => {
 
             {/* Legend */}
             <div className="grid grid-cols-2 gap-3">
-              {actualData.map((item) => (
+              {legendData.map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{
-                      backgroundColor:
-                        totalTrips === 0 ? "black" : item.color,
-                    }}
+                    style={{ backgroundColor: item.color }}
                   />
                   <span className="text-sm font-medium">{item.name}</span>
                   <span className="text-sm text-muted-foreground ml-auto">

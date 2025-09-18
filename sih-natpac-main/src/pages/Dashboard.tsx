@@ -1,18 +1,56 @@
+import { useMemo } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BottomNavigation from "@/components/BottomNavigation";
 
-const Dashboard = () => {
+interface Trip {
+  id: number;
+  title: string;
+  route: string;
+  time: string;
+  mode: string;
+  icon: string;
+}
+
+interface TripDay {
+  id: number;
+  date: string;
+  trips: Trip[];
+}
+
+interface DashboardProps {
+  tripHistory: TripDay[];
+}
+
+const Dashboard = ({ tripHistory }: DashboardProps) => {
   const navigate = useNavigate();
 
-  const statsData = [
-    { label: "Total Trips Recorded", value: "0", period: "7 days" },
-    { label: "Active Users", value: "0", period: "14 days" },
-    { label: "Avg. Trips/User/Day", value: "0", period: "1 month" },
-    { label: "Most Common Mode", value: "0", period: "6 months" },
-  ];
+  // Calculate stats dynamically
+  const statsData = useMemo(() => {
+    const allTrips = tripHistory.flatMap(day => day.trips);
+    const modeCounts: Record<string, number> = {};
+    allTrips.forEach(trip => {
+      modeCounts[trip.mode] = (modeCounts[trip.mode] || 0) + 1;
+    });
+
+    let mostCommonMode = "N/A";
+    let maxCount = 0;
+    Object.entries(modeCounts).forEach(([mode, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostCommonMode = mode;
+      }
+    });
+
+    return [
+      { label: "Total Trips Recorded", value: allTrips.length.toString(), period: "all" },
+      { label: "Active Users", value: "1", period: "all" }, // Single user for now
+      { label: "Avg. Trips/User/Day", value: (allTrips.length / tripHistory.length).toFixed(1), period: "all" },
+      { label: "Most Common Mode", value: mostCommonMode, period: "all" },
+    ];
+  }, [tripHistory]);
 
   const periodButtons = ["7 days", "14 days", "1 month", "6 months", "1 year"];
 
